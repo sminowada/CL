@@ -32,7 +32,7 @@ google-auth==2.6.5
 google-auth-oauthlib==0.4.6
 googledrivedownloader==0.4
 grpcio==1.44.0
-gurobipy==9.5.1
+gurobipy==11.0.3
 idna==3.3
 imageio==2.9.0
 importlib-metadata==4.11.3

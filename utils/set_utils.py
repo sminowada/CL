@@ -84,7 +84,7 @@ class Model(nn.Module):
                 self.net.fc = nn.Identity()  # Disable the classification layer to only take features
 
             elif self.feature_extractor == 'acdnet':
-                state = torch.load(self.opt.feature_ext_ckpt)
+                state = torch.load(self.opt.feature_ext_ckpt)#, weights_only=True
                 config = state['config']
                 weight = state['weight']
                 self.net = GetACDNetModel(sr=self.opt.sampling_rate, channel_config=config)
@@ -145,7 +145,7 @@ class Model(nn.Module):
                 self.hd_dim = self.input_dim
 
         # Set classify
-        if self.method == 'LifeHD':
+        if self.method == 'LifeHD' or self.method =='BaggingLifeHD':
             self.classify = nn.Linear(self.hd_dim, self.max_classes, bias=False)
             self.classify_sample_cnt = torch.zeros(self.max_classes).to(self.device)
             self.dist_mean = torch.zeros(self.max_classes).to(self.device)
@@ -190,8 +190,9 @@ class Model(nn.Module):
             sample_hv[:, mask] = self.projection(x)[:, mask]
 
         elif self.hd_encoder == 'idlevel':
-            # print(self.value(x)[:, :, mask].shape)  # (64, 561, 1000)
-            # print(self.position.weight[:, mask].shape)  # (561, 1000)
+            print(self.value(x)[:, :, mask].shape)  # (64, 561, 1000)
+            print(self.position.weight[:, mask].shape)  # (561, 1000)
+            print(x.shape)
             tmp_hv = functional.bind(self.position.weight[:, mask],
                                      self.value(x)[:, :, mask])  # bsz x num_features x hd_dim
             sample_hv[:, mask] = functional.multiset(tmp_hv)  # bsz x hd_dim
@@ -253,7 +254,7 @@ class Model(nn.Module):
         if mask is None:
             mask = torch.ones(self.hd_dim, device=self.device).type(torch.bool)
 
-        if self.method == 'LifeHD' or self.method == 'LifeHDsemi':
+        if self.method == 'LifeHD' or self.method == 'LifeHDsemi' or self.method =="BaggingLifeHD":
             class_hv = self.classify.weight[:self.cur_classes, mask]
         elif self.method == 'BasicHD':
             class_hv = self.classify.weight[:, mask]

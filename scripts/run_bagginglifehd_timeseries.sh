@@ -1,7 +1,7 @@
 # Usage:
 #   Run HD on various dataset under five streaming settings: iid, seq, seq-bl, seq-cc, seq-im
 #   Example usage:
-#     ./run_lifehd_timeseries.sh LifeHD mnist iid trial# spatiotemporal
+#     ./run_bagginglifehd_timeseries.sh BaggubgLifeHD mnist iid trial# spatiotemporal
 #   Method choices: BasicHD, SemiHD, LifeHD, LifeHDsemi
 #   Dataset choices: mnist, cifar10, cifar100, har, har_timeseries, mhealth, esc50
 #   Trial #: the number of trial

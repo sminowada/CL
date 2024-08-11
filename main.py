@@ -105,7 +105,7 @@ def parse_option():
 
     # method
     parser.add_argument('--method', type=str, default='hd',
-                        choices=['BasicHD', 'LifeHD', 'SemiHD', 'LifeHDsemi'],
+                        choices=['BasicHD', 'LifeHD', 'SemiHD', 'LifeHDsemi', 'BaggingLifeHD'],
                         help='choose method')
 
     parser.add_argument('--max_classes', type=int, default=10,
@@ -232,6 +232,11 @@ def main():
         Trainer = LifeHDsemi(opt, train_loader, val_loader,
                              num_classes, model, logger, device)
         Trainer.start()
+    elif opt.method == "BaggingLifeHD":
+        from methods.BaggingLifeHD.BaggingLifeHD import BaggingLifeHD
+        Trainer = BaggingLifeHD(opt, train_loader, val_loader,
+                                num_classes, model, logger, device, num_learners=5)  
+        Trainer.start()  
 
 if __name__ == '__main__':
     main()

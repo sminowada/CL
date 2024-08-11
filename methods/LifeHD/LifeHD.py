@@ -320,7 +320,6 @@ class LifeHD():
                     #        idx, len(self.train_loader),
                     #        label.cpu().numpy(),
                     #        simil_to_class.cpu().numpy(),
-                    #        pred_class.cpu().numpy()))
 
                     assert pred_class_samples.min() > 0, \
                         'Predicted class {} has zero sample!'
@@ -653,3 +652,6 @@ class LifeHD():
         self.model.last_edit[:new_classes] = old_last_edit[mask_to_keep]
 
         self.model.classify.weight[:] = F.normalize(self.model.classify_weights)
+
+
+
