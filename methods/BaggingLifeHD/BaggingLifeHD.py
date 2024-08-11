@@ -109,10 +109,6 @@ class BaggingLifeHD(LifeHD):
         for model in self.ensemble:
             model.trim_clusters()
 
-    
-
-    
-
     def add_sample_hv_to_novel_class(self, sample_hv):
         for model in self.ensemble:
             model.add_sample_hv_to_novel_class(sample_hv)
