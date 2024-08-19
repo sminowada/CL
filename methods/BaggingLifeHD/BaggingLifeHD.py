@@ -75,71 +75,60 @@ class BaggingLifeHD(LifeHD):
     #     self._log_metrics(majority_vote, flat_test_labels, epoch, loader_idx, plot, mode)
 
     def validate(self, epoch, loader_idx, plot, mode):
+        test_samples, test_embeddings = None, None
+        pred_labels, test_labels = [], []
+        
+        # Initialize list to store predictions from each learner
         all_predictions = []
-        all_test_labels = []
-        
+
         with torch.no_grad():
-            for model in self.ensemble:
-                model_predictions = []
-                labels_list = []
-                for images, labels in tqdm(model.val_loader, desc="Testing"):
-                    images = images.to(model.device)
-                    
-                    # Compute predictions for the current model
-                    outputs, _ = model.model(images)
-                    predictions = torch.argmax(outputs, dim=-1).cpu().numpy()
-                    
-                    model_predictions.extend(predictions)
-                    labels_list.extend(labels.cpu().numpy())
+            for images, labels in tqdm(self.val_loader, desc="Testing"):
+                images = images.to(self.device)
                 
-                all_predictions.append(np.array(model_predictions))
-                all_test_labels.append(np.array(labels_list))
+                # Get predictions from each learner
+                learner_predictions = []
+                for learner in self.learners:
+                    outputs, _ = learner(images)
+                    predictions = torch.argmax(outputs, dim=-1)
+                    learner_predictions.append(predictions.detach().cpu().tolist())
+                
+                # Aggregate predictions by majority voting
+                learner_predictions = np.array(learner_predictions).T  # Shape: (num_samples, num_learners)
+                aggregated_predictions = [np.bincount(preds).argmax() for preds in learner_predictions]
+                
+                # Gather aggregated prediction results
+                pred_labels += aggregated_predictions
+                test_labels += labels.cpu().tolist()
+
+                # Gather raw samples and unnormalized embeddings
+                embeddings = self.learners[0].encode(images).detach().cpu().numpy()
+                test_bsz = images.shape[0]
+                if test_embeddings is None:
+                    test_samples = images.squeeze().view(
+                        (test_bsz, -1)).cpu().numpy()
+                    test_embeddings = embeddings
+                else:
+                    test_samples = np.concatenate(
+                        (test_samples,
+                        images.squeeze().view((test_bsz, -1)).cpu().numpy()),
+                        axis=0)
+                    test_embeddings = np.concatenate(
+                        (test_embeddings, embeddings),
+                        axis=0)
+
+        # Convert lists to arrays
+        pred_labels = np.array(pred_labels).astype(int)
+        test_labels = np.array(test_labels).astype(int)
         
-        # Convert lists to NumPy arrays
-        all_predictions = np.array(all_predictions)  # Shape: (num_learners, num_samples)
-        all_test_labels = np.concatenate(all_test_labels)  # Flattened labels
-
-        # Aggregate predictions by majority vote
-        majority_vote = np.apply_along_axis(lambda x: np.bincount(x).argmax(), axis=0, arr=all_predictions)
-
-        # Log metrics
-        acc, purity, cm = eval_acc(all_test_labels, majority_vote)
+        # Log accuracy
+        acc, purity, cm = eval_acc(test_labels, pred_labels)
         print('Acc: {}, purity: {}'.format(acc, purity))
-        nmi = eval_nmi(all_test_labels, majority_vote)
+
+        nmi = eval_nmi(test_labels, pred_labels)
         print('NMI: {}'.format(nmi))
-        ri = eval_ri(all_test_labels, majority_vote)
+
+        ri = eval_ri(test_labels, pred_labels)
         print('RI: {}'.format(ri))
-
-        # Save results
-        with open(os.path.join(self.opt.save_folder, 'result.txt'), 'a+') as f:
-            f.write('{epoch},{idx},{acc},{purity},{nmi},{ri},{nc},{trim},{merge}\n'.format(
-                epoch=epoch, idx=loader_idx, acc=acc, purity=purity,
-                nmi=nmi, ri=ri, nc=self.model.cur_classes, 
-                trim=self.trim, merge=self.merge
-            ))
-
-        # Tensorboard logger
-        self.logger.log_value('accuracy', acc, loader_idx)
-        self.logger.log_value('purity', purity, loader_idx)
-        self.logger.log_value('nmi', nmi, loader_idx)
-        self.logger.log_value('ri', ri, loader_idx)
-        self.logger.log_value('num of clusters', self.model.cur_classes, loader_idx)
-
-        # Plot results
-        if plot:
-            # Plot t-SNE of embeddings with predicted labels
-            plot_tsne(test_embeddings, majority_vote, all_test_labels,
-                    title='embeddings {} {} {} {}'.format(self.opt.method, self.opt.dataset, acc, mode),
-                    fig_name=os.path.join(self.opt.save_folder,
-                                            '{}_emb_{}_{}_{}.png'.format(
-                                                loader_idx, self.opt.method, self.opt.dataset, mode)))
-
-            # Save confusion matrix
-            np.save(os.path.join(self.opt.save_folder, 'confusion_mat'), cm)
-            # Plot confusion matrix
-            plot_confusion_matrix(cm, self.opt.dataset, self.opt.save_folder)
-
-        return acc, purity
 
     def _log_metrics(self, pred_labels, test_labels, epoch, loader_idx, plot, mode):
         acc, purity, cm = eval_acc(test_labels, pred_labels)
