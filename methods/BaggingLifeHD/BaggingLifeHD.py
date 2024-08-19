@@ -67,7 +67,7 @@ class BaggingLifeHD(LifeHD):
         # Compute the final prediction by averaging scores and taking the argmax
         averaged_scores = np.mean(np.array(all_scores), axis=0)
         print(f"Shape of averaged_scores: {averaged_scores.shape}")
-        majority_vote = np.argmax(averaged_scores, axis=-1)
+        majority_vote = np.argmax(averaged_scores)
         
         # Flattening the labels
         flat_test_labels = np.concatenate(all_test_labels[0])
