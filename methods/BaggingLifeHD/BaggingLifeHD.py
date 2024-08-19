@@ -61,7 +61,7 @@ class BaggingLifeHD(LifeHD):
                     images = images.to(model.device)
                     outputs, _ = model.model(images)
                     scores.append(outputs.detach().cpu().numpy())
-                all_scores.append(np.array(scores), dtype = object)
+                all_scores.append(np.array(scores, dtype = object))
                 all_test_labels.append(np.array([label.cpu().numpy() for _, label in model.val_loader], dtype=object))
 
         # Compute the final prediction by averaging scores and taking the argmax
