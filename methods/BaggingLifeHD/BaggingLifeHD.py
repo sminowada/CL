@@ -45,7 +45,10 @@ class BaggingLifeHD(LifeHD):
     def start(self):
         for model in self.ensemble:
             print("Starting Model!!!")
-            model.start()
+            print("Training Model!!!")
+            model.train()
+        print("Calling bag validate")
+        self.validate(1, len(self.train_loader), True, 'final')
     
     def validate(self, epoch, loader_idx, plot, mode):
         print("VALIDATING!!!!!!!!")
@@ -90,20 +93,3 @@ class BaggingLifeHD(LifeHD):
         self.logger.log_value('nmi', nmi, loader_idx)
         self.logger.log_value('ri', ri, loader_idx)
         self.logger.log_value('num of clusters', self.model.cur_classes, loader_idx)
-    
-
-    def add_sample_hv_to_exist_class(self, sample_hv):
-        for model in self.ensemble:
-            model.add_sample_hv_to_exist_class(sample_hv)
-
-    def merge_clusters(self):
-        for model in self.ensemble:
-            model.merge_clusters()
-
-    def trim_clusters(self):
-        for model in self.ensemble:
-            model.trim_clusters()
-
-    def add_sample_hv_to_novel_class(self, sample_hv):
-        for model in self.ensemble:
-            model.add_sample_hv_to_novel_class(sample_hv)
