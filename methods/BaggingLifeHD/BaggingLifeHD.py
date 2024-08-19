@@ -76,7 +76,7 @@ class BaggingLifeHD(LifeHD):
 
         # Stack the padded arrays
         stacked_scores = np.stack(padded_scores)
-        majority_vote = np.argmax(averaged_scores, axis=1)
+        majority_vote = np.argmax(averaged_scores)
         
         # Flattening the labels
         flat_test_labels = np.concatenate(all_test_labels[0])
