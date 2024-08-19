@@ -50,85 +50,87 @@ class BaggingLifeHD(LifeHD):
         print("Calling bag validate")
         self.validate(1, len(self.train_loader), True, 'final')
     
-    # def validate(self, epoch, loader_idx, plot, mode):
-    #     print("VALIDATING!!!")
-    #     all_scores = []
-    #     all_test_labels = []
-    #     for model in self.ensemble:
-    #         with torch.no_grad():
-    #             scores = []
-    #             for images, labels in tqdm(model.val_loader, desc="Testing"):
-    #                 images = images.to(model.device)
-    #                 outputs, _ = model.model(images)
-    #                 scores.append(outputs.detach().cpu().numpy())
-    #             all_scores.append(np.array(scores, dtype = object))
-    #             all_test_labels.append(np.array([label.cpu().numpy() for _, label in model.val_loader], dtype=object))
-
-    #     # Compute the final prediction by averaging scores and taking the argmax
-    #     averaged_scores = np.mean(np.array(all_scores), axis=0)
-    #     print(f"Shape of averaged_scores: {averaged_scores.shape}")
-    #     majority_vote = np.argmax(averaged_scores)
-        
-    #     # Flattening the labels
-    #     flat_test_labels = np.concatenate(all_test_labels[0])
-        
-    #     self._log_metrics(majority_vote, flat_test_labels, epoch, loader_idx, plot, mode)
-
     def validate(self, epoch, loader_idx, plot, mode):
-        test_samples, test_embeddings = None, None
-        pred_labels, test_labels = [], []
+        print("VALIDATING!!!")
+        all_scores = []
+        all_test_labels = []
+        for model in self.ensemble:
+            with torch.no_grad():
+                scores = []
+                for images, labels in tqdm(model.val_loader, desc="Testing"):
+                    images = images.to(model.device)
+                    outputs, _ = model.model(images)
+                    scores.append(outputs.detach().cpu().numpy())
+                all_scores.append(np.array(scores, dtype = object))
+                all_test_labels.append(np.array([label.cpu().numpy() for _, label in model.val_loader], dtype=object))
+                print(all_scores)
+                print(all_test_labels)
+
+        # Compute the final prediction by averaging scores and taking the argmax
+        averaged_scores = np.mean(np.array(all_scores), axis=0)
+        print(f"Shape of averaged_scores: {averaged_scores.shape}")
+        majority_vote = np.argmax(averaged_scores)
         
-        # Initialize list to store predictions from each learner
-        all_predictions = []
-
-        with torch.no_grad():
-            for images, labels in tqdm(self.val_loader, desc="Testing"):
-                images = images.to(self.device)
-                
-                # Get predictions from each learner
-                learner_predictions = []
-                for learner in self.ensemble:
-                    outputs, _ = learner(images)
-                    predictions = torch.argmax(outputs, dim=-1)
-                    learner_predictions.append(predictions.detach().cpu().tolist())
-                
-                # Aggregate predictions by majority voting
-                learner_predictions = np.array(learner_predictions).T  # Shape: (num_samples, num_learners)
-                aggregated_predictions = [np.bincount(preds).argmax() for preds in learner_predictions]
-                
-                # Gather aggregated prediction results
-                pred_labels += aggregated_predictions
-                test_labels += labels.cpu().tolist()
-
-                # Gather raw samples and unnormalized embeddings
-                embeddings = self.ensemble[0].encode(images).detach().cpu().numpy()
-                test_bsz = images.shape[0]
-                if test_embeddings is None:
-                    test_samples = images.squeeze().view(
-                        (test_bsz, -1)).cpu().numpy()
-                    test_embeddings = embeddings
-                else:
-                    test_samples = np.concatenate(
-                        (test_samples,
-                        images.squeeze().view((test_bsz, -1)).cpu().numpy()),
-                        axis=0)
-                    test_embeddings = np.concatenate(
-                        (test_embeddings, embeddings),
-                        axis=0)
-
-        # Convert lists to arrays
-        pred_labels = np.array(pred_labels).astype(int)
-        test_labels = np.array(test_labels).astype(int)
+        # Flattening the labels
+        flat_test_labels = np.concatenate(all_test_labels[0])
         
-        # Log accuracy
-        acc, purity, cm = eval_acc(test_labels, pred_labels)
-        print('Acc: {}, purity: {}'.format(acc, purity))
+        self._log_metrics(majority_vote, flat_test_labels, epoch, loader_idx, plot, mode)
 
-        nmi = eval_nmi(test_labels, pred_labels)
-        print('NMI: {}'.format(nmi))
+    # def validate(self, epoch, loader_idx, plot, mode):
+    #     test_samples, test_embeddings = None, None
+    #     pred_labels, test_labels = [], []
+        
+    #     # Initialize list to store predictions from each learner
+    #     all_predictions = []
 
-        ri = eval_ri(test_labels, pred_labels)
-        print('RI: {}'.format(ri))
+    #     with torch.no_grad():
+    #         for images, labels in tqdm(self.val_loader, desc="Testing"):
+    #             images = images.to(self.device)
+                
+    #             # Get predictions from each learner
+    #             learner_predictions = []
+    #             for learner in self.ensemble:
+    #                 outputs, _ = learner.learner(images)
+    #                 predictions = torch.argmax(outputs, dim=-1)
+    #                 learner_predictions.append(predictions.detach().cpu().tolist())
+                
+    #             # Aggregate predictions by majority voting
+    #             learner_predictions = np.array(learner_predictions).T  # Shape: (num_samples, num_learners)
+    #             aggregated_predictions = [np.bincount(preds).argmax() for preds in learner_predictions]
+                
+    #             # Gather aggregated prediction results
+    #             pred_labels += aggregated_predictions
+    #             test_labels += labels.cpu().tolist()
+
+    #             # Gather raw samples and unnormalized embeddings
+    #             embeddings = self.ensemble[0].encode(images).detach().cpu().numpy()
+    #             test_bsz = images.shape[0]
+    #             if test_embeddings is None:
+    #                 test_samples = images.squeeze().view(
+    #                     (test_bsz, -1)).cpu().numpy()
+    #                 test_embeddings = embeddings
+    #             else:
+    #                 test_samples = np.concatenate(
+    #                     (test_samples,
+    #                     images.squeeze().view((test_bsz, -1)).cpu().numpy()),
+    #                     axis=0)
+    #                 test_embeddings = np.concatenate(
+    #                     (test_embeddings, embeddings),
+    #                     axis=0)
+
+    #     # Convert lists to arrays
+    #     pred_labels = np.array(pred_labels).astype(int)
+    #     test_labels = np.array(test_labels).astype(int)
+        
+    #     # Log accuracy
+    #     acc, purity, cm = eval_acc(test_labels, pred_labels)
+    #     print('Acc: {}, purity: {}'.format(acc, purity))
+
+    #     nmi = eval_nmi(test_labels, pred_labels)
+    #     print('NMI: {}'.format(nmi))
+
+    #     ri = eval_ri(test_labels, pred_labels)
+    #     print('RI: {}'.format(ri))
 
     def _log_metrics(self, pred_labels, test_labels, epoch, loader_idx, plot, mode):
         acc, purity, cm = eval_acc(test_labels, pred_labels)
