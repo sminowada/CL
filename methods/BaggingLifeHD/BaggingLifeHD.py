@@ -21,78 +21,106 @@ from utils.plot_utils import plot_tsne, plot_tsne_graph, \
     plot_novelty_detection, plot_confusion_matrix
 from methods.LifeHD.LifeHD import LifeHD 
 
+import random
 
-class BaggingLifeHD(LifeHD):
-    def __init__(self, opt, train_loader, val_loader, num_classes, model, logger, device, num_learners=5):
-        super(BaggingLifeHD, self).__init__(opt, train_loader, val_loader, num_classes, model, logger, device)
-        self.num_learners = num_learners
-        self.ensemble = [LifeHD(opt, self._bootstrap_sample(train_loader), val_loader, num_classes, model, logger, device)
-                         for _ in range(self.num_learners)]
+class BaggingLifeHD:
+    def __init__(self, num_models, opt, train_loader, val_loader, num_classes, model_class, logger, device):
+        """
+        Initialize the Bagging ensemble of LifeHD models
 
+        Args:
+            num_models: Number of models in the ensemble
+            opt: The options/parameters for the model
+            train_loader: The data loader for training
+            val_loader: The data loader for validation
+            num_classes: The number of classes in the dataset
+            model_class: The class of the model to use (LifeHD in this case)
+            logger: Logger for tensorboard or other logging
+            device: The device to use (CPU or GPU)
+        """
+        self.num_models = num_models
+        self.models = []
+        self.opt = opt
 
-    def _bootstrap_sample(self, data_loader):
-        dataset = data_loader.dataset
-        indices = torch.randperm(len(dataset)).tolist()
-        subset = torch.utils.data.Subset(dataset, indices)
-        new_data_loader = DataLoader(subset, batch_size=data_loader.batch_size, 
-                                shuffle=True, 
-                                num_workers=data_loader.num_workers)
-    
-        return new_data_loader
-    
+        # Create and train num_models instances of LifeHD
+        for i in range(num_models):
+            # Create a bootstrap sample of the training data
+            bootstrap_train_loader = self.create_bootstrap_loader(train_loader)
 
-    
-    def start(self):
-        for model in self.ensemble:
-            model.start()
-    def warmup(self):
-        for model in self.ensemble:
-            model.warmup()
+            # Initialize a new model
+            model_instance = model_class(opt, bootstrap_train_loader, val_loader, num_classes, 
+                                         model_class.model, logger, device)
 
-    def train(self, epoch):
-        for model in self.ensemble: 
-            model.train(epoch)
-    
-    def validate(self, epoch, loader_idx, plot, mode):
-        all_scores = []
-        all_test_labels = []
-        for model in self.ensemble:
-            with torch.no_grad():
-                scores = []
-                for images, labels in tqdm(model.val_loader, desc="Testing"):
-                    images = images.to(model.device)
-                    outputs, _ = model.model(images)
-                    scores.append(outputs.detach().cpu().numpy())
-                all_scores.append(np.array(scores))
-                all_test_labels.append(np.array([label.cpu().numpy() for _, label in model.val_loader]))
+            # Train the model on the bootstrap sample
+            model_instance.start()
+            self.models.append(model_instance)
 
-        # Compute the final prediction by averaging scores and taking the argmax
-        averaged_scores = np.mean(np.array(all_scores), axis=0)
-        majority_vote = np.argmax(averaged_scores, axis=-1)
+    def create_bootstrap_loader(self, original_loader):
+        """
+        Create a bootstrap sample from the original data loader
+
+        Args:
+            original_loader: Original data loader
+
+        Returns:
+            A data loader containing the bootstrap sample
+        """
+        bootstrap_dataset = []
+        dataset_size = len(original_loader.dataset)
+        indices = random.choices(range(dataset_size), k=dataset_size)
+
+        for idx in indices:
+            bootstrap_dataset.append(original_loader.dataset[idx])
+
+        # Create a new DataLoader using the bootstrap dataset
+        return torch.utils.data.DataLoader(bootstrap_dataset, batch_size=original_loader.batch_size, shuffle=True)
+
+    def aggregate_predictions(self, images):
+        """
+        Aggregate predictions from all models in the ensemble
+
+        Args:
+            images: The input images for which predictions are required
+
+        Returns:
+            The aggregated predictions
+        """
+        predictions = []
         
-        # Flattening the labels
-        flat_test_labels = np.concatenate(all_test_labels[0])
-        
-        self._log_metrics(majority_vote, flat_test_labels, epoch, loader_idx, plot, mode)
+        for model in self.models:
+            outputs, _ = model.model(images)
+            predictions.append(outputs)
 
-    def _log_metrics(self, pred_labels, test_labels, epoch, loader_idx, plot, mode):
-        acc, purity, cm = eval_acc(test_labels, pred_labels)
-        print('Acc: {}, purity: {}'.format(acc, purity))
-        nmi = eval_nmi(test_labels, pred_labels)
-        print('NMI: {}'.format(nmi))
-        ri = eval_ri(test_labels, pred_labels)
-        print('RI: {}'.format(ri))
+        # Aggregate the predictions (e.g., majority voting)
+        final_prediction = torch.mean(torch.stack(predictions), dim=0)
+        return torch.argmax(final_prediction, dim=-1)
 
-        with open(os.path.join(self.opt.save_folder, 'result.txt'), 'a+') as f:
-            f.write('{epoch},{idx},{acc},{purity},{nmi},{ri},{nc},{trim},{merge}\n'.format(
-                epoch=epoch, idx=loader_idx, acc=acc, purity=purity,
-                nmi=nmi, ri=ri, nc=self.model.cur_classes,
-                trim=self.trim, merge=self.merge
-            ))
+    def validate(self):
+        """
+        Validate the ensemble on the validation set
+        """
+        pred_labels, test_labels = [], []
 
-        self.logger.log_value('accuracy', acc, loader_idx)
-        self.logger.log_value('purity', purity, loader_idx)
-        self.logger.log_value('nmi', nmi, loader_idx)
-        self.logger.log_value('ri', ri, loader_idx)
-        self.logger.log_value('num of clusters', self.model.cur_classes, loader_idx)
+        with torch.no_grad():
+            for images, labels in tqdm(self.models[0].val_loader, desc="Testing Ensemble"):
+                images = images.to(self.opt.device)
+
+                # Aggregate predictions across all models
+                predictions = self.aggregate_predictions(images)
+
+                pred_labels += predictions.detach().cpu().tolist()
+                test_labels += labels.cpu().tolist()
+
+        # Evaluate performance using eval_acc, eval_nmi, eval_ri
+        acc, purity, cm = eval_acc(np.array(test_labels), np.array(pred_labels))
+        print(f'Ensemble Acc: {acc}, purity: {purity}')
+
+        nmi = eval_nmi(np.array(test_labels), np.array(pred_labels))
+        print(f'Ensemble NMI: {nmi}')
+
+        ri = eval_ri(np.array(test_labels), np.array(pred_labels))
+        print(f'Ensemble RI: {ri}')
+
+        return acc, purity, nmi, ri
+
     
