@@ -87,7 +87,7 @@ class BaggingLifeHD(LifeHD):
                 
                 # Get predictions from each learner
                 learner_predictions = []
-                for learner in self.learners:
+                for learner in self.num_learners:
                     outputs, _ = learner(images)
                     predictions = torch.argmax(outputs, dim=-1)
                     learner_predictions.append(predictions.detach().cpu().tolist())
@@ -101,7 +101,7 @@ class BaggingLifeHD(LifeHD):
                 test_labels += labels.cpu().tolist()
 
                 # Gather raw samples and unnormalized embeddings
-                embeddings = self.learners[0].encode(images).detach().cpu().numpy()
+                embeddings = self.num_learners[0].encode(images).detach().cpu().numpy()
                 test_bsz = images.shape[0]
                 if test_embeddings is None:
                     test_samples = images.squeeze().view(
