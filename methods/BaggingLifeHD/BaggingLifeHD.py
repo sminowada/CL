@@ -45,35 +45,41 @@ class BaggingLifeHD(LifeHD):
     def start(self):
         for model in self.ensemble:
             model.start()
-    def warmup(self):
-        for model in self.ensemble:
-            model.warmup()
+        self.validate(1, len(self.ensemble[0].train_loader), False, 'after')
 
-    def train(self, epoch):
-        for model in self.ensemble: 
-            model.train(epoch)
-    
     def validate(self, epoch, loader_idx, plot, mode):
-        all_scores = []
-        all_test_labels = []
-        for model in self.ensemble:
-            with torch.no_grad():
+        test_samples, test_embedding = None, None
+        pred_labels, test_labels = [], []
+        with torch.no_grad():
+            for images, labels in tqdm(self.ensemble[0].val_loader, desc="Testing"):
+                images = images.to(model.device)
                 scores = []
-                for images, labels in tqdm(model.val_loader, desc="Testing"):
-                    images = images.to(model.device)
+                for model in self.ensemble:
                     outputs, _ = model.model(images)
-                    scores.append(outputs.detach().cpu().numpy())
-                all_scores.append(np.array(scores))
-                all_test_labels.append(np.array([label.cpu().numpy() for _, label in model.val_loader]))
+                    print(type(outputs))
+                    print(outputs)
+                    #avg outputs with scores
+                    
+                predictions = torch.argmax(scores,dim=-1)
+                pred_labels += predictions.detach().cpu().tolist()
+                test_labels += labels.cpu().tolist()
 
-        # Compute the final prediction by averaging scores and taking the argmax
-        averaged_scores = np.mean(np.array(all_scores), axis=0)
-        majority_vote = np.argmax(averaged_scores, axis=-1)
+                embeddings = self.ensemble[0].encode(images).detach().cpu().numpy()
+                test_bsz = images.shape[0]
+                if test_embeddings is None:
+                    test_samples = images.squeeze().view(
+                        (test_bsz, -1)).cpu().numpy()
+                    test_embeddings = embeddings
+                else:
+                    test_samples = np.concatenate(
+                        (test_samples,
+                         images.squeeze().view((test_bsz, -1)).cpu().numpy()),
+                        axis=0)
+                    test_embeddings = np.concatenate(
+                        (test_embeddings, embeddings),
+                        axis=0)
         
-        # Flattening the labels
-        flat_test_labels = np.concatenate(all_test_labels[0])
-        
-        self._log_metrics(majority_vote, flat_test_labels, epoch, loader_idx, plot, mode)
+        #self._log_metrics(majority_vote, flat_test_labels, epoch, loader_idx, plot, mode)
 
     def _log_metrics(self, pred_labels, test_labels, epoch, loader_idx, plot, mode):
         acc, purity, cm = eval_acc(test_labels, pred_labels)
@@ -95,20 +101,3 @@ class BaggingLifeHD(LifeHD):
         self.logger.log_value('nmi', nmi, loader_idx)
         self.logger.log_value('ri', ri, loader_idx)
         self.logger.log_value('num of clusters', self.model.cur_classes, loader_idx)
-    
-
-    def add_sample_hv_to_exist_class(self, sample_hv):
-        for model in self.ensemble:
-            model.add_sample_hv_to_exist_class(sample_hv)
-
-    def merge_clusters(self):
-        for model in self.ensemble:
-            model.merge_clusters()
-
-    def trim_clusters(self):
-        for model in self.ensemble:
-            model.trim_clusters()
-
-    def add_sample_hv_to_novel_class(self, sample_hv):
-        for model in self.ensemble:
-            model.add_sample_hv_to_novel_class(sample_hv)
