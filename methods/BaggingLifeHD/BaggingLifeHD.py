@@ -24,7 +24,7 @@ from methods.LifeHD.LifeHD import LifeHD
 import random
 
 class BaggingLifeHD:
-    def __init__(self, num_models, opt, train_loader, val_loader, num_classes, model_class, logger, device):
+    def __init__(self, opt, train_loader, val_loader, num_classes, model_class, logger, device,num_models):
         """
         Initialize the Bagging ensemble of LifeHD models
 
