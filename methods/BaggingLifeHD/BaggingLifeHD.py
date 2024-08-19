@@ -68,10 +68,14 @@ class BaggingLifeHD(LifeHD):
 
         # Compute the final prediction by averaging scores and taking the argmax
         averaged_scores = np.mean(np.array(all_scores), axis=0)
-        stacked_scores = np.stack(averaged_scores)
-        print(f"Shape of averaged_scores: {averaged_scores.shape}")
-        averaged_scores = np.mean(stacked_scores, axis=0)
-        print(averaged_scores)
+       # Find the maximum shape
+        max_shape = (max(arr.shape[0] for arr in averaged_scores), max(arr.shape[1] for arr in averaged_scores))
+
+        # Pad arrays to match the maximum shape
+        padded_scores = [np.pad(arr, [(0, max_shape[0] - arr.shape[0]), (0, max_shape[1] - arr.shape[1])], mode='constant') for arr in averaged_scores]
+
+        # Stack the padded arrays
+        stacked_scores = np.stack(padded_scores)
         majority_vote = np.argmax(averaged_scores, axis=1)
         
         # Flattening the labels
