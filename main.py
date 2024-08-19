@@ -235,7 +235,7 @@ def main():
     elif opt.method == "BaggingLifeHD":
         from methods.BaggingLifeHD.BaggingLifeHD import BaggingLifeHD
         Trainer = BaggingLifeHD(opt, train_loader, val_loader,
-                                num_classes, model, logger, device, num_learners=2)  
+                                num_classes, model, logger, device, num_learners=1)  
         Trainer.start()  
 
 if __name__ == '__main__':
