@@ -46,7 +46,7 @@ class BaggingLifeHD(LifeHD):
         for model in self.ensemble:
             print("Starting Model!!!")
             print("Training Model!!!")
-            model.train()
+            model.train(1)
         print("Calling bag validate")
         self.validate(1, len(self.train_loader), True, 'final')
     
