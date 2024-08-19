@@ -23,7 +23,7 @@ from methods.LifeHD.LifeHD import LifeHD
 
 
 class BaggingLifeHD(LifeHD):
-    def __init__(self, opt, train_loader, val_loader, num_classes, model, logger, device, num_learners=5):
+    def __init__(self, opt, train_loader, val_loader, num_classes, model, logger, device, num_learners):
         super(BaggingLifeHD, self).__init__(opt, train_loader, val_loader, num_classes, model, logger, device)
         self.num_learners = num_learners
         self.ensemble = [LifeHD(opt, self._bootstrap_sample(train_loader), val_loader, num_classes, model, logger, device)
@@ -44,16 +44,11 @@ class BaggingLifeHD(LifeHD):
     
     def start(self):
         for model in self.ensemble:
+            print("Starting Model!!!")
             model.start()
-    def warmup(self):
-        for model in self.ensemble:
-            model.warmup()
-
-    def train(self, epoch):
-        for model in self.ensemble: 
-            model.train(epoch)
     
     def validate(self, epoch, loader_idx, plot, mode):
+        print("VALIDATING!!!!!!!!")
         all_scores = []
         all_test_labels = []
         for model in self.ensemble:
@@ -83,7 +78,7 @@ class BaggingLifeHD(LifeHD):
         ri = eval_ri(test_labels, pred_labels)
         print('RI: {}'.format(ri))
 
-        with open(os.path.join(self.opt.save_folder, 'result.txt'), 'a+') as f:
+        with open(os.path.join(self.opt.save_folder, 'finalresult.txt'), 'a+') as f:
             f.write('{epoch},{idx},{acc},{purity},{nmi},{ri},{nc},{trim},{merge}\n'.format(
                 epoch=epoch, idx=loader_idx, acc=acc, purity=purity,
                 nmi=nmi, ri=ri, nc=self.model.cur_classes,
