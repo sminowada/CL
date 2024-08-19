@@ -63,12 +63,13 @@ class BaggingLifeHD(LifeHD):
                     scores.append(outputs.detach().cpu().numpy())
                 all_scores.append(np.array(scores, dtype = object))
                 all_test_labels.append(np.array([label.cpu().numpy() for _, label in model.val_loader], dtype=object))
-                print(all_scores)
-                print(all_test_labels)
+                # print(all_scores)
+                # print(all_test_labels)
 
         # Compute the final prediction by averaging scores and taking the argmax
         averaged_scores = np.mean(np.array(all_scores), axis=0)
         print(f"Shape of averaged_scores: {averaged_scores.shape}")
+        print(averaged_scores)
         majority_vote = np.argmax(averaged_scores)
         
         # Flattening the labels
