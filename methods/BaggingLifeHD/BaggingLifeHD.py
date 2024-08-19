@@ -24,7 +24,7 @@ from methods.LifeHD.LifeHD import LifeHD
 import random
 
 class BaggingLifeHD:
-    def __init__(self, opt, train_loader, val_loader, num_classes, model_class, logger, device, num_models):
+    def __init__(self, opt, train_loader, val_loader, num_classes, model, logger, device, num_models):
         """
         Initialize the Bagging ensemble of LifeHD models
 
@@ -48,8 +48,8 @@ class BaggingLifeHD:
             bootstrap_train_loader = self.create_bootstrap_loader(train_loader)
 
             # Initialize a new model
-            model_instance = model_class(opt, bootstrap_train_loader, val_loader, num_classes, 
-                                         model_class.model, logger, device)
+            model_instance = LifeHD(opt, bootstrap_train_loader, val_loader, num_classes, 
+                                         model, logger, device)
 
             # Train the model on the bootstrap sample
             model_instance.start()
