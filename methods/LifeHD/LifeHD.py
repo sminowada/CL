@@ -168,6 +168,7 @@ class LifeHD():
         self.merge = 0
 
     def start(self):
+        print("lifeHD start")
         for epoch in range(1, self.opt.epochs + 1):
             # train for one epoch
             time1 = time.time() 
@@ -240,6 +241,7 @@ class LifeHD():
             self.warmup_done = True
 
     def train(self, epoch):
+        print("lifeHD train")
         """Training of one epoch on single-pass of data"""
         """Unsupervised method. Should not use the labels"""
         # Set validation frequency
@@ -388,6 +390,7 @@ class LifeHD():
             
 
     def validate(self, epoch, loader_idx, plot, mode):  # task_list
+        print("lifeHD validate")
         """Validation, evaluate linear classification accuracy and kNN accuracy"""
         test_samples, test_embeddings = None, None
         pred_labels, test_labels = [], []
