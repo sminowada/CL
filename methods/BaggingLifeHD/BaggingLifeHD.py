@@ -85,25 +85,61 @@ class BaggingLifeHD(LifeHD):
                         (test_embeddings, embeddings),
                         axis=0)
         
-        #self._log_metrics(majority_vote, flat_test_labels, epoch, loader_idx, plot, mode)
-
-    def _log_metrics(self, pred_labels, test_labels, epoch, loader_idx, plot, mode):
+        # log accuracy
+        pred_labels = np.array(pred_labels).astype(int)
+        print(np.unique(pred_labels))
+        test_labels = np.array(test_labels).astype(int)
         acc, purity, cm = eval_acc(test_labels, pred_labels)
         print('Acc: {}, purity: {}'.format(acc, purity))
+
         nmi = eval_nmi(test_labels, pred_labels)
         print('NMI: {}'.format(nmi))
+
         ri = eval_ri(test_labels, pred_labels)
         print('RI: {}'.format(ri))
 
-        with open(os.path.join(self.opt.save_folder, 'result.txt'), 'a+') as f:
+        with open(os.path.join(self.opt.save_folder, 'finalresult.txt'), 'a+') as f:
             f.write('{epoch},{idx},{acc},{purity},{nmi},{ri},{nc},{trim},{merge}\n'.format(
                 epoch=epoch, idx=loader_idx, acc=acc, purity=purity,
-                nmi=nmi, ri=ri, nc=self.model.cur_classes,
+                nmi=nmi, ri=ri, nc=self.model.cur_classes, 
                 trim=self.trim, merge=self.merge
             ))
 
+        # tensorboard logger
         self.logger.log_value('accuracy', acc, loader_idx)
         self.logger.log_value('purity', purity, loader_idx)
         self.logger.log_value('nmi', nmi, loader_idx)
         self.logger.log_value('ri', ri, loader_idx)
         self.logger.log_value('num of clusters', self.model.cur_classes, loader_idx)
+
+        # plot raw and high-dimensional embeddings
+        if plot:
+            # plot the tSNE of raw samples with predicted labels
+            #plot_tsne(test_samples, np.array(pred_labels), np.array(test_labels),
+            #          title='raw samples {} {} {}'.format(self.opt.method, self.opt.dataset, acc),
+            #          fig_name=os.path.join(self.opt.save_folder,
+            #                                '{}_sap_{}_{}.png'.format(
+            #                                    loader_idx, self.opt.method, self.opt.dataset)))
+            # plot the tSNE of embeddings with predicted labels
+            plot_tsne(test_embeddings, np.array(pred_labels), np.array(test_labels),
+                      title='embeddings {} {} {} {}'.format(self.opt.method, self.opt.dataset, acc, mode),
+                      fig_name=os.path.join(self.opt.save_folder,
+                                            '{}_emb_{}_{}_{}.png'.format(
+                                                loader_idx, self.opt.method, self.opt.dataset, mode)))
+
+            # plot embeddings with class hypervectors
+            #class_hvs = self.model.extract_class_hv()  # numpy array
+            #plot_tsne_graph(class_hvs,
+            #                title='class hvs {} {} {}'.format(self.opt.method, self.opt.dataset, acc),
+            #                fig_name=os.path.join(self.opt.save_folder,
+            #                                      '{}_cls_hv_{}_{}.png'.format(
+            #                                          loader_idx, self.opt.method, self.opt.dataset)))
+
+            # save confusion matrix
+            np.save(os.path.join(self.opt.save_folder, 'confusion_mat'), cm)
+            # plot confusion matrix
+            plot_confusion_matrix(cm, self.opt.dataset, self.opt.save_folder)
+
+        
+        return acc, purity
+
