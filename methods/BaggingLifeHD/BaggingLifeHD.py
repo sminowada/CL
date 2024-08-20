@@ -62,9 +62,12 @@ class BaggingLifeHD(LifeHD):
                         scores = outputs
                         print("first model")
                     else:
+                        print("SCORES!!!")
                         print(scores)
+                        print("OUTPUTS!!!")
+                        print(outputs)
                         scores = (scores + outputs) / 2
-                        print(scores)
+                        #print(scores)
                         print("averaging scores")
                     #print(type(outputs))
                     #print(outputs)
