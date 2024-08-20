@@ -23,7 +23,7 @@ from methods.LifeHD.LifeHD import LifeHD
 
 
 class BaggingLifeHD(LifeHD):
-    def __init__(self, opt, train_loader, val_loader, num_classes, model, logger, device, num_learners=5):
+    def __init__(self, opt, train_loader, val_loader, num_classes, model, logger, device, num_learners):
         super(BaggingLifeHD, self).__init__(opt, train_loader, val_loader, num_classes, model, logger, device)
         self.num_learners = num_learners
         self.ensemble = [LifeHD(opt, self._bootstrap_sample(train_loader), val_loader, num_classes, model, logger, device)
