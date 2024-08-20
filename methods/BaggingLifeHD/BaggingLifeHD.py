@@ -58,6 +58,10 @@ class BaggingLifeHD(LifeHD):
                 scores = []
                 for model in self.ensemble:
                     outputs, _ = model.model(images)
+                    if len(scores) == 0:
+                        scores = outputs
+                    else:
+                        scores = (scores + outputs) / 2
                     print(type(outputs))
                     print(outputs)
                     #avg outputs with scores
