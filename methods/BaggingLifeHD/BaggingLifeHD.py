@@ -70,7 +70,7 @@ class BaggingLifeHD(LifeHD):
                 pred_labels += predictions.detach().cpu().tolist()
                 test_labels += labels.cpu().tolist()
 
-                embeddings = self.ensemble[0].encode(images).detach().cpu().numpy()
+                embeddings = self.ensemble[0].model.encode(images).detach().cpu().numpy()
                 test_bsz = images.shape[0]
                 if test_embeddings is None:
                     test_samples = images.squeeze().view(
