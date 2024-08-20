@@ -31,6 +31,7 @@ class BaggingLifeHD(LifeHD):
 
 
     def _bootstrap_sample(self, data_loader, seed):
+        print("using seed: ", seed)
         dataset = data_loader.dataset
         torch.manual_seed(seed)
         indices = torch.randperm(len(dataset)).tolist()
