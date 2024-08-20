@@ -53,23 +53,26 @@ class BaggingLifeHD(LifeHD):
         test_samples, test_embeddings = None, None
         pred_labels, test_labels = [], []
         with torch.no_grad():
-            for images, labels in tqdm(self.ensemble[0].val_loader, desc="Testing"):
+            for images, labels in tqdm(self.ensemble[0].val_loader, desc="Testing"): #questionable
                 images = images.to(self.ensemble[0].device)
                 scores = []
                 for model in self.ensemble:
                     outputs, _ = model.model(images)
                     if len(scores) == 0:
                         scores = outputs
+                        print("first model")
                     else:
                         scores = (scores + outputs) / 2
-                    print(type(outputs))
-                    print(outputs)
+                        print("averaging scores")
+                    #print(type(outputs))
+                    #print(outputs)
                     #avg outputs with scores
 
                 predictions = torch.argmax(scores,dim=-1)
                 pred_labels += predictions.detach().cpu().tolist()
                 test_labels += labels.cpu().tolist()
 
+                #questionable
                 embeddings = self.ensemble[0].model.encode(images).detach().cpu().numpy()
                 test_bsz = images.shape[0]
                 if test_embeddings is None:
