@@ -50,7 +50,7 @@ class BaggingLifeHD(LifeHD):
         self.validate(1, len(self.ensemble[0].train_loader), True, 'final')
 
     def validate(self, epoch, loader_idx, plot, mode):
-        test_samples, test_embedding = None, None
+        test_samples, test_embeddings = None, None
         pred_labels, test_labels = [], []
         with torch.no_grad():
             for images, labels in tqdm(self.ensemble[0].val_loader, desc="Testing"):
