@@ -177,8 +177,8 @@ class LifeHD():
             print('epoch {}, total time {:.2f}'.format(epoch, time2 - time1))
 
             # final validation
-            acc = self.validate(epoch, len(self.train_loader), True, 'final')
-            print('Stream final acc: {}'.format(acc))
+            # acc = self.validate(epoch, len(self.train_loader), True, 'final')
+            # print('Stream final acc: {}'.format(acc))
 
     def warmup(self, idx, sample_hv, label):
         # warmup training
