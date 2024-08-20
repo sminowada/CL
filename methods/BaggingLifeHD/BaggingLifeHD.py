@@ -54,7 +54,7 @@ class BaggingLifeHD(LifeHD):
         pred_labels, test_labels = [], []
         with torch.no_grad():
             for images, labels in tqdm(self.ensemble[0].val_loader, desc="Testing"):
-                images = images.to(model.device)
+                images = images.to(self.ensemble[0].device)
                 scores = []
                 for model in self.ensemble:
                     outputs, _ = model.model(images)
