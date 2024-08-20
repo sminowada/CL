@@ -35,8 +35,10 @@ class BaggingLifeHD(LifeHD):
         dataset = data_loader.dataset
         torch.manual_seed(seed)
         indices = torch.randperm(len(dataset)).tolist()
-        subset = torch.utils.data.Subset(dataset, indices[:len(indices)//2])
-        print(subset[0:25])
+        subset = torch.utils.data.Subset(dataset, indices[:len(indices)//10])
+        print("SUBSET!!!")
+        print(subset[0:10])
+        print(sum(subset))
         new_data_loader = DataLoader(subset, batch_size=data_loader.batch_size, 
                                 shuffle=True, 
                                 num_workers=data_loader.num_workers)
