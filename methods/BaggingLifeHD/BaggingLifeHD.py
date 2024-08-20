@@ -26,12 +26,13 @@ class BaggingLifeHD(LifeHD):
     def __init__(self, opt, train_loader, val_loader, num_classes, model, logger, device, num_learners):
         super(BaggingLifeHD, self).__init__(opt, train_loader, val_loader, num_classes, model, logger, device)
         self.num_learners = num_learners
-        self.ensemble = [LifeHD(opt, self._bootstrap_sample(train_loader), val_loader, num_classes, model, logger, device)
+        self.ensemble = [LifeHD(opt, self._bootstrap_sample(train_loader, _), val_loader, num_classes, model, logger, device)
                          for _ in range(self.num_learners)]
 
 
-    def _bootstrap_sample(self, data_loader):
+    def _bootstrap_sample(self, data_loader, seed):
         dataset = data_loader.dataset
+        torch.manual_seed(seed)
         indices = torch.randperm(len(dataset)).tolist()
         subset = torch.utils.data.Subset(dataset, indices)
         new_data_loader = DataLoader(subset, batch_size=data_loader.batch_size, 
