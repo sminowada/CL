@@ -44,8 +44,10 @@ class BaggingLifeHD(LifeHD):
     
     def start(self):
         for model in self.ensemble:
+            print("Starting model: ", model)
             model.start()
-        self.validate(1, len(self.ensemble[0].train_loader), False, 'after')
+        print("Starting Validation")
+        self.validate(1, len(self.ensemble[0].train_loader), True, 'final')
 
     def validate(self, epoch, loader_idx, plot, mode):
         test_samples, test_embedding = None, None
@@ -59,7 +61,7 @@ class BaggingLifeHD(LifeHD):
                     print(type(outputs))
                     print(outputs)
                     #avg outputs with scores
-                    
+
                 predictions = torch.argmax(scores,dim=-1)
                 pred_labels += predictions.detach().cpu().tolist()
                 test_labels += labels.cpu().tolist()
